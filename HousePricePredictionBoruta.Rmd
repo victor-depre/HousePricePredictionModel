@@ -1,0 +1,63 @@
+---
+title: "HousePricePredictionModel"
+author: "Victor Dépré"
+date: "11/17/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(Boruta)
+library(ggplot2)
+library(plotly)
+```
+
+
+```{r}
+full.df
+``` 
+
+# Mise en place de l'algorithme pour trouver les valeurs de SalePrice
+
+Test de Boruta / Il faut défaire les jeux de données test et train.
+
+```{r}
+train.df <- full.df[which(full.df$TrainData=="TRUE")]
+test.df <- full.df[which(full.df$TrainData=="FALSE")]
+```
+
+```{r eval=FALSE, cache=TRUE, include=FALSE}
+set.seed(1234)
+boruta.full.df <- Boruta(SalePrice~., data = train.df, doTrace = 1)
+print(boruta.full.df)
+```
+
+
+```{r}
+plot(boruta.full.df)
+```
+
+```{r}
+plotImpHistory(boruta.full.df)
+```
+
+
+```{r}
+getSelectedAttributes(boruta.full.df, withTentative = FALSE)
+```
+
+```{r}
+BorutaImportance <- attStats(boruta.full.df)
+print(BorutaImportance)
+```
+
+Exportation du fichier pour l'utiliser sur un nouveau document.
+
+```{r}
+write.csv(train.df, "House_Price_Train.csv", row.names = FALSE)
+write.csv(test.df, "House_Price_Test.csv", row.names = FALSE)
+```
+
