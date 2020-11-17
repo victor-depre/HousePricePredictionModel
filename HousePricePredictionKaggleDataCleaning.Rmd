@@ -18,7 +18,6 @@ library(naniar) # to visualize missing data
 library(data.table) # to ?????????
 library(corrr) # pour les corrélations entre variables
 library(naniar) # trouver l'emplacement des NA
-library(Boruta) # trouver les variables importantes
 ```
 
 # Chargement du jeu de données
@@ -55,7 +54,7 @@ full.df <- rbind(train.df, test.df)
 We merge the two datasets to perform analysis on the full data.
 
 ```{r}
-#head(full.df, 10)
+head(full.df, 10)
 ```
 
 Nous regardons les dix premières lignes de notre jeu de données, nous pouvons constater que certaines variables comportent des valeurs manquantes. Nous allons donc étudier quelles sont les valeurs manquantes puis essayer de définir une méthode pour les prédire.
