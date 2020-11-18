@@ -18,6 +18,7 @@ library(naniar) # to visualize missing data
 library(data.table) # to ?????????
 library(corrr) # pour les corrélations entre variables
 library(naniar) # trouver l'emplacement des NA
+library(Boruta) # trouver les variables importantes
 ```
 
 # Chargement du jeu de données
@@ -25,6 +26,7 @@ library(naniar) # trouver l'emplacement des NA
 ```{r}
 train.df <- read_csv("trainhouseprices.csv")
 test.df <- read_csv("testhouseprices.csv")
+
 train.df$TrainData <- TRUE 
 test.df$TrainData <- FALSE
 ```
@@ -54,7 +56,7 @@ full.df <- rbind(train.df, test.df)
 We merge the two datasets to perform analysis on the full data.
 
 ```{r}
-head(full.df, 10)
+#head(full.df, 10)
 ```
 
 Nous regardons les dix premières lignes de notre jeu de données, nous pouvons constater que certaines variables comportent des valeurs manquantes. Nous allons donc étudier quelles sont les valeurs manquantes puis essayer de définir une méthode pour les prédire.
@@ -65,7 +67,9 @@ Nous regardons les dix premières lignes de notre jeu de données, nous pouvons 
 
 ```{r}
 na_count <-sapply(full.df, function(y) sum(length(which(is.na(y)))))
+
 na_count <- data.frame(na_count)
+
 na_count <- rownames_to_column(na_count)
 na_count <- filter(na_count, na_count > 0)
 #na_count
@@ -160,6 +164,7 @@ Nous voyons que les valeurs pour LotFrontage divergent en fonction du lieu. Nous
 full.df <- data.table(full.df)
 setkey(full.df, Neighborhood)
 full.df[,LotFrontage := ifelse(is.na(LotFrontage), median(LotFrontage, na.rm=TRUE), LotFrontage), by=Neighborhood]
+
 full.df <- full.df[order(full.df$Id),]
 ```
 
@@ -214,8 +219,8 @@ Sur la ligne 2577, toutes les variables relatives au Garage indiquent l'absence 
 
 ```{r}
 full.df$GarageType[2577] <- "Abs"
-full.df$GarageCars[is.na(full.df$GarageCars)] = "Abs"
-full.df$GarageArea[is.na(full.df$GarageArea)] = "Abs"
+full.df$GarageCars[is.na(full.df$GarageCars)] = 0
+full.df$GarageArea[is.na(full.df$GarageArea)] = 0
 ```
 
 ### Variables MasVnrArea/MasVnrType
@@ -478,6 +483,7 @@ BsmtFinType1 affiche GLQ, BsmtQual affiche Gd et BsmtFinType2 affiche NA.
 ```{r}
 full.df$BsmtFinType1[is.na(full.df$BsmtFinType1)] = "Abs"
 full.df$BsmtFinType2[is.na(full.df$BsmtFinType2)] = "Abs"
+
 #which(full.df$BsmtFinType1=="GLQ" & full.df$BsmtQual=="Gd" & full.df$BsmtFinType2=="Abs", arr.ind = TRUE)
 ```
 
@@ -704,6 +710,7 @@ Nous remarquons qu'en étudiant trois variables, nous pouvons déduire la valeur
 ```{r}
 #full.df$OverallQual[2217]
 #full.df$OverallCond[2217]
+
 #full.df$OverallQual[2474]
 #full.df$OverallCond[2474]
 ```
@@ -757,7 +764,3 @@ sum(is.na(full.df$SalePrice & full.df$TrainData=="TRUE"))
 ```
 
 Nous retrouvons bien les 1459 valeurs manquantes pour la variable SalePrice sur le jeu de données test.
-
-```{r}
-full.df
-```
