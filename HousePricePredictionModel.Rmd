@@ -8,3 +8,102 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+```{r message=FALSE}
+library(tidyverse)
+library(DescTools)
+library(randomForest)
+library(plotly)
+```
+
+```{r message=FALSE}
+Train_Final <- read_csv("House_Price_Train.csv")
+Test_Final <- read_csv("House_Price_Test.csv")
+```
+
+# Changement des noms de variables car bug si on laisse un chiffre en première position du nom d'une des variables
+
+```{r include=FALSE}
+Train_Final <- Train_Final %>% rename(FirstFlrSF = `1stFlrSF`,
+                       SecondFlrSF = `2ndFlrSF`)
+Test_Final <- Test_Final %>% rename(FirstFlrSF = `1stFlrSF`,
+                       SecondFlrSF = `2ndFlrSF`)
+```
+
+# Mise en place de l'équation avec les variables importantes
+
+```{r}
+Model_Equation <- "SalePrice ~ MSSubClass + MSZoning + LotFrontage + LotArea + LotShape + LandContour +   Neighborhood + BldgType + HouseStyle + OverallQual  + OverallCond + YearBuilt + YearRemodAdd  + Exterior1st + Exterior2nd +  MasVnrType + MasVnrArea + ExterQual + Foundation + BsmtQual + BsmtCond + BsmtFinType1 + BsmtFinSF1 + BsmtFinType2 + BsmtUnfSF + TotalBsmtSF +  HeatingQC + CentralAir + Electrical + FirstFlrSF + SecondFlrSF + GrLivArea + BsmtFullBath + FullBath + HalfBath + BedroomAbvGr + KitchenAbvGr + KitchenQual + TotRmsAbvGrd + Functional + Fireplaces + FireplaceQu + GarageType + GarageFinish + GarageCars + GarageArea + GarageQual + GarageCond + PavedDrive + WoodDeckSF + OpenPorchSF + SaleCondition"
+Model_Formula <- as.formula(Model_Equation) 
+```
+
+# Passage des variables textes en facteurs
+
+```{r}
+factor_cols <- c("MSZoning", "LotShape", "LandContour", "Neighborhood", "BldgType", "HouseStyle", "Exterior1st", "Exterior2nd", "MasVnrType", "ExterQual", "Foundation", "BsmtQual", "BsmtCond", "BsmtFinType1", "BsmtFinType2", "HeatingQC", "CentralAir", "Electrical", "KitchenQual", "Functional", "FireplaceQu", "GarageType", "GarageFinish", "GarageQual", "GarageCond", "PavedDrive", "SaleCondition") # GarageYrBlt retiré car trop de catégories au sein de la variable
+Train_Final[factor_cols] <- lapply(Train_Final[factor_cols], as.factor)
+Test_Final[factor_cols] <- lapply(Test_Final[factor_cols], as.factor)
+```
+
+# Lancement de RandomForest
+
+1er test avec 1000 arbres
+2nd test avec 400 arbres
+
+```{r cache=TRUE}
+set.seed(4321)
+Model <- randomForest(formula=Model_Formula, data = Train_Final, ntree = 400)
+```
+
+```{r}
+Model$importance[order(Model$importance[, 1], decreasing = TRUE), ]
+```
+
+```{r}
+varImpPlot(Model)
+```
+
+Voir pour tester sur le jeu de données Train pour comparer entre valeur prédite et valeur réelle.
+
+```{r}
+print(Model)
+```
+
+```{r}
+Train_Final$PredictPrice <- predict(Model, Train_Final)
+```
+
+```{r}
+Train_Final$RatioPricePredict <- Train_Final$PredictPrice - Train_Final$SalePrice
+mean(Train_Final$RatioPricePredict)
+sd(Train_Final$RatioPricePredict)
+```
+
+Vérifier les variables en facteur pour corriger.
+HouseStyle 7 au lieu de 8
+Exterior1st 13 au lieu de 15
+Exterior2nd 15 au lieu de 16
+Electrical 4 au lieu de 5
+GarageQual 5 au lieu de 6
+
+```{r}
+levels(Test_Final$HouseStyle) <- union(levels(Train_Final$HouseStyle), levels(Test_Final$HouseStyle))
+levels(Test_Final$Exterior1st) <- union(levels(Train_Final$Exterior1st), levels(Test_Final$Exterior1st))
+levels(Test_Final$Exterior2nd) <- union(levels(Train_Final$Exterior2nd), levels(Test_Final$Exterior2nd))
+levels(Test_Final$Electrical) <- union(levels(Train_Final$Electrical), levels(Test_Final$Electrical))
+levels(Test_Final$GarageQual) <- union(levels(Train_Final$GarageQual), levels(Test_Final$GarageQual))
+```
+
+```{r}
+Test_Final$PredictPrice <- predict(Model, Test_Final)
+```
+Reste à exporter le fichier et poster sur Kaggle
+
+```{r}
+Id <- Test_Final$Id
+FinalDF <- as.data.frame(Id)
+FinalDF$SalePrice <- Test_Final$PredictPrice
+write.csv(FinalDF, "Kaggle_Submission1.csv", row.names = FALSE)
+```
+
+Voir pour additioner les variables indiquant la surface habitable (FirstFl et SecondFl)
